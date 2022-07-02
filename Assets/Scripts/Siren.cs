@@ -1,25 +1,27 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(AudioSource))]
 public class Siren : MonoBehaviour
 {
-    [SerializeField] private float _pathTime;
+    [SerializeField] private float _timeSoundGain;
     
-    private float _pathRunningTime;
+    private float _soundRunningTime;
     private float _minVolume;
     private float _maxVolume;
     private float _currentSound;
-    private bool _inHouse;
     private AudioSource _audioSource;
+    private Coroutine _stopByTimerJob;
+    private Coroutine _playByTimerJob;
 
     private void OnValidate()
     {
         int minPathTime = 4;
 
-        if (_pathTime < minPathTime)
+        if (_timeSoundGain < minPathTime)
         {
-            _pathTime = minPathTime;
+            _timeSoundGain = minPathTime;
         }
     }
 
@@ -28,63 +30,81 @@ public class Siren : MonoBehaviour
         _audioSource = GetComponent<AudioSource>();
         _minVolume = 0;
         _maxVolume = 1;
-        _inHouse = false;
         _currentSound = _audioSource.volume;
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        StopHouseSiren();
+        StopPlayAudio();
     }
-
-    private void OnTriggerStay(Collider collision)
-    {
-        if (collision.TryGetComponent(out Player player))
-        {
-            _pathRunningTime += Time.deltaTime;
-            _audioSource.volume = Mathf.Lerp(_currentSound, _maxVolume, _pathRunningTime / _pathTime);
-        }
-    }
-
+    
     private void OnTriggerEnter(Collider collision)
     {
-        _pathRunningTime = 0;
+        _soundRunningTime = 0;
         _currentSound = _audioSource.volume;
         
         if (collision.TryGetComponent(out Player player))
         {
-            _inHouse = true;
-        }
+            if (_currentSound <= _minVolume)
+            {
+                _audioSource.Play();
+            }
 
-        if (_audioSource.volume <= _minVolume)
-        {
-            _audioSource.Play();
+            _playByTimerJob = StartCoroutine(PlayByTimer());
         }
-            
     }
 
     private void OnTriggerExit(Collider collision)
     {
-        _pathRunningTime = 0;
+        _soundRunningTime = 0;
+        _currentSound = _audioSource.volume;
         
         if (collision.TryGetComponent(out Player player))
         {
-            _inHouse = false;
-            _currentSound = _audioSource.volume;
+            _stopByTimerJob = StartCoroutine(StopByTimer());
         }
     }
 
-    private void StopHouseSiren()
+    private void StopPlayAudio()
     {
-        if (_inHouse == false)
-        {
-            _pathRunningTime += Time.deltaTime;
-            _audioSource.volume = Mathf.Lerp(_currentSound, _minVolume, _pathRunningTime / _pathTime);
-        }
-
         if (_audioSource.volume <= _minVolume)
         {
             _audioSource.Stop();
+            
+            if (_stopByTimerJob != null)
+            {
+                StopCoroutine(_stopByTimerJob);
+            }
+        }
+    }
+
+    private IEnumerator PlayByTimer()
+    {
+        if (_stopByTimerJob != null)
+        {
+            StopCoroutine(_stopByTimerJob);
+        }
+
+        while (_audioSource.volume < _maxVolume)
+        {
+            _soundRunningTime += Time.deltaTime;
+            _audioSource.volume = Mathf.Lerp(_currentSound, _maxVolume, _soundRunningTime / _timeSoundGain);
+            yield return null;
+        }
+    }
+
+    private IEnumerator StopByTimer()
+    {
+        if (_playByTimerJob != null)
+        {
+            StopCoroutine(_playByTimerJob);
+        }
+        
+        while (_audioSource.volume > _minVolume)
+        {
+            _soundRunningTime += Time.deltaTime;
+            _audioSource.volume = Mathf.Lerp(_currentSound, _minVolume, _soundRunningTime / _timeSoundGain);
+            yield return null;
         }
     }
 }
