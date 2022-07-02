@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
@@ -33,15 +32,11 @@ public class Siren : MonoBehaviour
         _currentSound = _audioSource.volume;
     }
 
-    private void FixedUpdate()
-    {
-        StopPlayAudio();
-    }
-    
     private void OnTriggerEnter(Collider collision)
     {
         _soundRunningTime = 0;
         _currentSound = _audioSource.volume;
+        StopSoundCoroutines();
         
         if (collision.TryGetComponent(out Player player))
         {
@@ -49,7 +44,7 @@ public class Siren : MonoBehaviour
             {
                 _audioSource.Play();
             }
-
+            
             _playByTimerJob = StartCoroutine(PlayByTimer());
         }
     }
@@ -58,6 +53,7 @@ public class Siren : MonoBehaviour
     {
         _soundRunningTime = 0;
         _currentSound = _audioSource.volume;
+        StopSoundCoroutines();
         
         if (collision.TryGetComponent(out Player player))
         {
@@ -65,46 +61,40 @@ public class Siren : MonoBehaviour
         }
     }
 
-    private void StopPlayAudio()
+    private void StopSoundCoroutines()
     {
-        if (_audioSource.volume <= _minVolume)
+        if (_playByTimerJob != null)
         {
-            _audioSource.Stop();
-            
-            if (_stopByTimerJob != null)
-            {
-                StopCoroutine(_stopByTimerJob);
-            }
+            StopCoroutine(_playByTimerJob);
+        }
+
+        if (_stopByTimerJob != null)
+        {
+            StopCoroutine(_stopByTimerJob);
         }
     }
 
     private IEnumerator PlayByTimer()
     {
-        if (_stopByTimerJob != null)
-        {
-            StopCoroutine(_stopByTimerJob);
-        }
-
         while (_audioSource.volume < _maxVolume)
         {
             _soundRunningTime += Time.deltaTime;
             _audioSource.volume = Mathf.Lerp(_currentSound, _maxVolume, _soundRunningTime / _timeSoundGain);
+            
             yield return null;
         }
     }
 
     private IEnumerator StopByTimer()
     {
-        if (_playByTimerJob != null)
-        {
-            StopCoroutine(_playByTimerJob);
-        }
-        
         while (_audioSource.volume > _minVolume)
         {
             _soundRunningTime += Time.deltaTime;
             _audioSource.volume = Mathf.Lerp(_currentSound, _minVolume, _soundRunningTime / _timeSoundGain);
+            
             yield return null;
         }
+        
+        _audioSource.Stop();
     }
 }

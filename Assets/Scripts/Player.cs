@@ -4,6 +4,7 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     [SerializeField] private int _movementSpeed;
+    
     private Rigidbody _rigidbody;
     private Vector3 _movementVector;
 
@@ -14,14 +15,13 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        Movement();
+        Move();
     }
 
-    private void Movement()
+    private void Move()
     {
         _movementVector.x = Input.GetAxis("Horizontal") * _movementSpeed;
         _movementVector.z = Input.GetAxis("Vertical") * _movementSpeed;
-
         _rigidbody.velocity = _movementVector;
     }
 }
